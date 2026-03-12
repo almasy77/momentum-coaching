@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 function ToggleRow({ label, description, enabled, onToggle }: {
   label: string;
@@ -30,41 +30,88 @@ function ToggleRow({ label, description, enabled, onToggle }: {
   );
 }
 
-export default function SettingsPage() {
-  const [goals, setGoals] = useState({
-    outreach: 10,
-    followups: 7,
-    posts: 2,
-    newContacts: 5,
-  });
+interface Settings {
+  goals: { outreach: number; followups: number; posts: number; newContacts: number };
+  notifications: { morning: boolean; outreach: boolean; linkedin: boolean; evening: boolean; weekly: boolean };
+}
 
-  const [notifications, setNotifications] = useState({
-    morning: true,
-    outreach: true,
-    linkedin: true,
-    evening: true,
-    weekly: true,
-  });
+const DEFAULT_SETTINGS: Settings = {
+  goals: { outreach: 10, followups: 7, posts: 2, newContacts: 5 },
+  notifications: { morning: true, outreach: true, linkedin: true, evening: true, weekly: true },
+};
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => setSettings(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = useCallback(async (updated: Settings) => {
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   const updateGoal = (key: string, delta: number) => {
-    setGoals((prev) => ({
-      ...prev,
-      [key]: Math.max(1, (prev as Record<string, number>)[key] + delta),
-    }));
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        goals: {
+          ...prev.goals,
+          [key]: Math.max(1, (prev.goals as Record<string, number>)[key] + delta),
+        },
+      };
+      save(updated);
+      return updated;
+    });
   };
 
   const toggleNotif = (key: string) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: !(prev as Record<string, boolean>)[key],
-    }));
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: !(prev.notifications as Record<string, boolean>)[key],
+        },
+      };
+      save(updated);
+      return updated;
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="px-4 pt-12 pb-6 flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-12 pb-6 space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Preferences &amp; goals</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Preferences &amp; goals
+          {saving && <span className="ml-2 text-brand-500">saving…</span>}
+        </p>
       </div>
 
       {/* Profile */}
@@ -103,7 +150,7 @@ export default function SettingsPage() {
                 −
               </button>
               <span className="text-sm font-bold text-gray-900 w-5 text-center">
-                {(goals as Record<string, number>)[goal.key]}
+                {(settings.goals as Record<string, number>)[goal.key]}
               </span>
               <button
                 onClick={() => updateGoal(goal.key, 1)}
@@ -119,36 +166,11 @@ export default function SettingsPage() {
       {/* Notifications */}
       <div className="card">
         <h2 className="text-xs font-semibold text-gray-400 uppercase mb-3">🔔 Notifications</h2>
-        <ToggleRow
-          label="Morning motivation"
-          description="Daily quote at 7:30 AM"
-          enabled={notifications.morning}
-          onToggle={() => toggleNotif('morning')}
-        />
-        <ToggleRow
-          label="Outreach reminder"
-          description="Follow-up nudge at 9:00 AM"
-          enabled={notifications.outreach}
-          onToggle={() => toggleNotif('outreach')}
-        />
-        <ToggleRow
-          label="LinkedIn posting window"
-          description="Tue/Thu at 11:00 AM"
-          enabled={notifications.linkedin}
-          onToggle={() => toggleNotif('linkedin')}
-        />
-        <ToggleRow
-          label="Evening review"
-          description="Daily summary at 6:00 PM"
-          enabled={notifications.evening}
-          onToggle={() => toggleNotif('evening')}
-        />
-        <ToggleRow
-          label="Weekly summary"
-          description="Sunday at 8:00 PM"
-          enabled={notifications.weekly}
-          onToggle={() => toggleNotif('weekly')}
-        />
+        <ToggleRow label="Morning motivation" description="Daily quote at 7:30 AM" enabled={settings.notifications.morning} onToggle={() => toggleNotif('morning')} />
+        <ToggleRow label="Outreach reminder" description="Follow-up nudge at 9:00 AM" enabled={settings.notifications.outreach} onToggle={() => toggleNotif('outreach')} />
+        <ToggleRow label="LinkedIn posting window" description="Tue/Thu at 11:00 AM" enabled={settings.notifications.linkedin} onToggle={() => toggleNotif('linkedin')} />
+        <ToggleRow label="Evening review" description="Daily summary at 6:00 PM" enabled={settings.notifications.evening} onToggle={() => toggleNotif('evening')} />
+        <ToggleRow label="Weekly summary" description="Sunday at 8:00 PM" enabled={settings.notifications.weekly} onToggle={() => toggleNotif('weekly')} />
       </div>
 
       {/* Data */}
@@ -162,7 +184,6 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* App info */}
       <p className="text-center text-xs text-gray-300 pt-2">
         Momentum v1.0 &middot; Built with ❤️ by Bryan
       </p>

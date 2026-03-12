@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Contact } from '@/lib/types';
-import { SAMPLE_CONTACTS } from '@/lib/data/sample-contacts';
 import { ContactList } from '@/components/contacts/ContactList';
 import { ContactDetail } from '@/components/contacts/ContactDetail';
 import { ContactForm } from '@/components/contacts/ContactForm';
@@ -10,11 +9,32 @@ import { ContactForm } from '@/components/contacts/ContactForm';
 type View = 'list' | 'detail' | 'add' | 'edit';
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState<Contact[]>(SAMPLE_CONTACTS);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const selectedContact = contacts.find((c) => c.id === selectedId) ?? null;
+
+  const fetchContacts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/contacts');
+      const data = await res.json();
+      // Parse stringified contacts if needed
+      const parsed = data.map((c: Contact | string) =>
+        typeof c === 'string' ? JSON.parse(c) : c
+      );
+      setContacts(parsed);
+    } catch (err) {
+      console.error('Failed to load contacts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
@@ -26,35 +46,57 @@ export default function ContactsPage() {
     setView('add');
   };
 
-  const handleSave = (data: Omit<Contact, 'id' | 'createdAt'>) => {
-    if (view === 'edit' && selectedContact) {
-      setContacts((prev) =>
-        prev.map((c) =>
-          c.id === selectedContact.id
-            ? { ...c, ...data }
-            : c
-        )
-      );
-      setView('detail');
-    } else {
-      const newContact: Contact = {
-        ...data,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setContacts((prev) => [newContact, ...prev]);
-      setSelectedId(newContact.id);
-      setView('detail');
+  const handleSave = async (data: Omit<Contact, 'id' | 'createdAt'>) => {
+    const contact: Contact =
+      view === 'edit' && selectedContact
+        ? { ...selectedContact, ...data }
+        : {
+            ...data,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString().split('T')[0],
+          };
+
+    try {
+      await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      });
+      await fetchContacts();
+      setSelectedId(contact.id);
+      setView(view === 'edit' ? 'detail' : 'detail');
+    } catch (err) {
+      console.error('Failed to save contact:', err);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedId) {
-      setContacts((prev) => prev.filter((c) => c.id !== selectedId));
-      setSelectedId(null);
-      setView('list');
+      try {
+        await fetch('/api/contacts', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedId }),
+        });
+        await fetchContacts();
+        setSelectedId(null);
+        setView('list');
+      } catch (err) {
+        console.error('Failed to delete contact:', err);
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="px-4 pt-12 pb-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-400">Loading contacts…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-12 pb-6">
