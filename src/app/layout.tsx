@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { BottomNav } from '@/components/BottomNav';
+import { AuthWrapper } from '@/components/auth/AuthWrapper';
 
 export const metadata: Metadata = {
   title: 'Momentum',
@@ -35,10 +36,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="font-sans">
-        <main className="min-h-screen max-w-lg mx-auto">
-          {children}
-        </main>
-        <BottomNav />
+        <AuthWrapper>
+          <main className="min-h-screen max-w-lg mx-auto">
+            {children}
+          </main>
+          <BottomNav />
+        </AuthWrapper>
       </body>
     </html>
   );
