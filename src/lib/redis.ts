@@ -11,6 +11,7 @@ const PREFIX = 'momentum';
 export const keys = {
   contacts: `${PREFIX}:contacts`,
   contact: (id: string) => `${PREFIX}:contact:${id}`,
+  contactOutreach: (contactId: string) => `${PREFIX}:contact:${contactId}:outreach`,
   settings: `${PREFIX}:settings`,
   outreach: `${PREFIX}:outreach`,
   outreachEntry: (id: string) => `${PREFIX}:outreach:${id}`,

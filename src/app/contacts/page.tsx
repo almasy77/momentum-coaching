@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Contact } from '@/lib/types';
 import { ContactList } from '@/components/contacts/ContactList';
 import { ContactDetail } from '@/components/contacts/ContactDetail';
@@ -13,6 +14,7 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   const selectedContact = contacts.find((c) => c.id === selectedId) ?? null;
 
@@ -20,7 +22,6 @@ export default function ContactsPage() {
     try {
       const res = await fetch('/api/contacts');
       const data = await res.json();
-      // Parse stringified contacts if needed
       const parsed = data.map((c: Contact | string) =>
         typeof c === 'string' ? JSON.parse(c) : c
       );
@@ -35,6 +36,15 @@ export default function ContactsPage() {
   useEffect(() => {
     fetchContacts();
   }, [fetchContacts]);
+
+  // Handle query param actions from dashboard
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'new' || action === 'add') {
+      setView('add');
+    }
+    // 'log' action just shows the contact list — user picks a contact, then logs
+  }, [searchParams]);
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
@@ -120,8 +130,9 @@ export default function ContactsPage() {
           onEdit={() => setView('edit')}
           onBack={() => setView('list')}
           onLogOutreach={() => {
-            // TODO: open outreach log form
+            // Log form is now handled inside ContactDetail
           }}
+          onContactUpdated={fetchContacts}
         />
       )}
 

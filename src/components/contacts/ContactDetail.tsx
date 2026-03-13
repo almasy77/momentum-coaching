@@ -1,6 +1,9 @@
 'use client';
 
-import { Contact, CAREER_PATH_LABELS } from '@/lib/types';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Contact, OutreachEntry, CAREER_PATH_LABELS } from '@/lib/types';
+import { OutreachLogForm } from './OutreachLogForm';
+import { OutreachTimeline } from './OutreachTimeline';
 
 function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
   if (!value) return null;
@@ -40,14 +43,91 @@ interface ContactDetailProps {
   onEdit: () => void;
   onBack: () => void;
   onLogOutreach: () => void;
+  onContactUpdated?: () => void;
 }
 
-export function ContactDetail({ contact, onEdit, onBack, onLogOutreach }: ContactDetailProps) {
+export function ContactDetail({ contact, onEdit, onBack, onLogOutreach, onContactUpdated }: ContactDetailProps) {
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [outreachEntries, setOutreachEntries] = useState<OutreachEntry[]>([]);
+  const [loadingOutreach, setLoadingOutreach] = useState(true);
+
+  // Editable notes state
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notes, setNotes] = useState(contact.notes || '');
+  const [savingNotes, setSavingNotes] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const fetchOutreach = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/outreach?contactId=${contact.id}`);
+      const data = await res.json();
+      setOutreachEntries(data);
+    } catch (err) {
+      console.error('Failed to load outreach:', err);
+    } finally {
+      setLoadingOutreach(false);
+    }
+  }, [contact.id]);
+
+  useEffect(() => {
+    fetchOutreach();
+  }, [fetchOutreach]);
+
+  // Sync notes when contact prop changes
+  useEffect(() => {
+    setNotes(contact.notes || '');
+  }, [contact.notes]);
+
   const formatDate = (d: string | null) => {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
     });
+  };
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...contact, notes }),
+      });
+      setEditingNotes(false);
+      onContactUpdated?.();
+    } catch (err) {
+      console.error('Failed to save notes:', err);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleNotesBlur = () => {
+    if (notes !== (contact.notes || '')) {
+      handleSaveNotes();
+    } else {
+      setEditingNotes(false);
+    }
+  };
+
+  const handleLogSave = async (entry: Omit<OutreachEntry, 'id'>) => {
+    try {
+      await fetch('/api/outreach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...entry, id: crypto.randomUUID() }),
+      });
+      setShowLogForm(false);
+      await fetchOutreach();
+      onContactUpdated?.();
+    } catch (err) {
+      console.error('Failed to log outreach:', err);
+    }
+  };
+
+  const startEditNotes = () => {
+    setEditingNotes(true);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   return (
@@ -114,18 +194,57 @@ export function ContactDetail({ contact, onEdit, onBack, onLogOutreach }: Contac
         <InfoRow label="Phone" value={contact.phone} href={`tel:${contact.phone}`} />
       </div>
 
-      {/* Notes */}
-      {contact.notes && (
-        <div className="card">
-          <h3 className="text-xs font-medium text-gray-400 uppercase mb-2">Notes</h3>
-          <p className="text-sm text-gray-700 leading-relaxed">{contact.notes}</p>
+      {/* Notes — tap to edit */}
+      <div className="card cursor-pointer" onClick={!editingNotes ? startEditNotes : undefined}>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-medium text-gray-400 uppercase">Notes</h3>
+          {!editingNotes && (
+            <span className="text-xs text-brand-600">tap to edit</span>
+          )}
+          {savingNotes && (
+            <span className="text-xs text-gray-400">saving...</span>
+          )}
         </div>
+        {editingNotes ? (
+          <textarea
+            ref={textareaRef}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={handleNotesBlur}
+            rows={4}
+            className="w-full text-sm text-gray-700 leading-relaxed border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+            placeholder="Add notes, context, talking points..."
+          />
+        ) : (
+          <p className="text-sm text-gray-700 leading-relaxed min-h-[2rem]">
+            {notes || <span className="text-gray-400 italic">No notes yet — tap to add</span>}
+          </p>
+        )}
+      </div>
+
+      {/* Outreach Timeline */}
+      {loadingOutreach ? (
+        <div className="card text-center py-4">
+          <div className="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        </div>
+      ) : (
+        <OutreachTimeline entries={outreachEntries} />
       )}
 
       {/* Log outreach button */}
-      <button onClick={onLogOutreach} className="btn-primary w-full">
+      <button onClick={() => setShowLogForm(true)} className="btn-primary w-full">
         📞 Log Outreach
       </button>
+
+      {/* Log form sheet */}
+      {showLogForm && (
+        <OutreachLogForm
+          contactId={contact.id}
+          contactName={contact.name}
+          onSave={handleLogSave}
+          onCancel={() => setShowLogForm(false)}
+        />
+      )}
     </div>
   );
 }

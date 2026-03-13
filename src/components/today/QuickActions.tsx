@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 const actions = [
-  { href: '/contacts?action=add', label: 'Log Outreach', icon: '📞', color: 'bg-blue-50 text-blue-700' },
+  { href: '/contacts?action=log', label: 'Log Outreach', icon: '📞', color: 'bg-blue-50 text-blue-700' },
   { href: '/content?action=draft', label: 'Draft Post', icon: '✏️', color: 'bg-purple-50 text-purple-700' },
   { href: '/contacts?action=new', label: 'Add Contact', icon: '➕', color: 'bg-green-50 text-green-700' },
 ];
