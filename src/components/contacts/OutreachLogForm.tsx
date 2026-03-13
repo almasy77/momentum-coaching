@@ -48,7 +48,7 @@ export function OutreachLogForm({ contactId, contactName, onSave, onCancel }: Ou
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
 
       {/* Sheet */}
-      <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 animate-slide-up">
+      <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-slide-up max-h-[85vh] overflow-y-auto">
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
 
         <h3 className="text-lg font-bold text-gray-900 mb-1">Log Outreach</h3>
