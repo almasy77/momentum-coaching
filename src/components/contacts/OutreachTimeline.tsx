@@ -36,8 +36,11 @@ export function OutreachTimeline({ entries }: OutreachTimelineProps) {
     );
   }
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (d: string) => {
+    // Append T00:00:00 to date-only strings so they parse as local time, not UTC
+    const iso = d.includes('T') ? d : `${d}T00:00:00`;
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <div className="card">

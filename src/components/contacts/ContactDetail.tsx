@@ -80,7 +80,9 @@ export function ContactDetail({ contact, onEdit, onBack, onLogOutreach, onContac
 
   const formatDate = (d: string | null) => {
     if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-US', {
+    // Append T00:00:00 to date-only strings so they parse as local time, not UTC
+    const iso = d.includes('T') ? d : `${d}T00:00:00`;
+    return new Date(iso).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
     });
   };
