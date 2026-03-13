@@ -44,10 +44,11 @@ interface ContactDetailProps {
   onBack: () => void;
   onLogOutreach: () => void;
   onContactUpdated?: () => void;
+  autoShowLog?: boolean;
 }
 
-export function ContactDetail({ contact, onEdit, onBack, onLogOutreach, onContactUpdated }: ContactDetailProps) {
-  const [showLogForm, setShowLogForm] = useState(false);
+export function ContactDetail({ contact, onEdit, onBack, onLogOutreach, onContactUpdated, autoShowLog }: ContactDetailProps) {
+  const [showLogForm, setShowLogForm] = useState(autoShowLog ?? false);
   const [outreachEntries, setOutreachEntries] = useState<OutreachEntry[]>([]);
   const [loadingOutreach, setLoadingOutreach] = useState(true);
 

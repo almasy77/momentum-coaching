@@ -14,6 +14,7 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [autoLog, setAutoLog] = useState(false);
   const searchParams = useSearchParams();
 
   const selectedContact = contacts.find((c) => c.id === selectedId) ?? null;
@@ -43,7 +44,9 @@ export default function ContactsPage() {
     if (action === 'new' || action === 'add') {
       setView('add');
     }
-    // 'log' action just shows the contact list — user picks a contact, then logs
+    if (action === 'log') {
+      setAutoLog(true);
+    }
   }, [searchParams]);
 
   const handleSelect = (id: string) => {
@@ -112,9 +115,11 @@ export default function ContactsPage() {
     <div className="px-4 pt-12 pb-6">
       {view === 'list' && (
         <>
-          <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {autoLog ? 'Log Outreach' : 'Contacts'}
+          </h1>
           <p className="text-sm text-gray-500 mt-1 mb-4">
-            {contacts.length} in your network
+            {autoLog ? 'Select a contact' : `${contacts.length} in your network`}
           </p>
           <ContactList
             contacts={contacts}
@@ -128,11 +133,12 @@ export default function ContactsPage() {
         <ContactDetail
           contact={selectedContact}
           onEdit={() => setView('edit')}
-          onBack={() => setView('list')}
+          onBack={() => { setView('list'); setAutoLog(false); }}
           onLogOutreach={() => {
             // Log form is now handled inside ContactDetail
           }}
           onContactUpdated={fetchContacts}
+          autoShowLog={autoLog}
         />
       )}
 
