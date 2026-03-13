@@ -3,15 +3,18 @@ export type Priority = 'high' | 'medium' | 'low';
 export type ContactStatus = 'not_started' | 'in_progress' | 'active' | 'on_hold';
 
 export type CareerPath =
+  | 'ceo_fortune'
   | 'pe_operating'
   | 'board_portfolio'
   | 'vc_growth'
   | 'consulting'
   | 'founder'
   | 'cso_president'
-  | 'coaching_advisory';
+  | 'coaching_advisory'
+  | 'multiple_paths';
 
 export const CAREER_PATH_LABELS: Record<CareerPath, string> = {
+  ceo_fortune: 'CEO (Fortune 50)',
   pe_operating: 'PE Operating Partner',
   board_portfolio: 'Board Portfolio',
   vc_growth: 'VC / Growth Equity',
@@ -19,6 +22,7 @@ export const CAREER_PATH_LABELS: Record<CareerPath, string> = {
   founder: 'Founder / Acquisition',
   cso_president: 'CSO / President',
   coaching_advisory: 'Coaching / Advisory',
+  multiple_paths: 'Multiple Paths',
 };
 
 export const WARMTH_LABELS: Record<Warmth, string> = {
